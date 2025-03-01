@@ -10,9 +10,7 @@ This Symfony bundle protects against HashDos attacks by limiting the size of JSO
 composer require iwf-web/json-request-check-bundle
 ```
 
-### Step 2: Register Bundle (Symfony < 5.0)
-
-For Symfony versions before 5.0, you need to manually register the bundle in your `config/bundles.php`:
+### Step 2: Register Bundle
 
 ```php
 // config/bundles.php
