@@ -18,7 +18,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 /**
  * Exception thrown when a JSON payload exceeds the maximum allowed size.
  *
- * This exception results in a HTTP 413 Payload Too Large response.
+ * This exception results in an HTTP 413 Payload Too Large response.
  */
 final class PayloadTooLargeException extends HttpException
 {
@@ -42,7 +42,7 @@ final class PayloadTooLargeException extends HttpException
      * @param string|null $message Custom error message (if null, a message will be generated)
      * @param \Throwable|null $previous Previous exception
      * @param int $code Error code
-     * @param array $headers Additional HTTP headers to include in the response
+     * @param array<string> $headers Additional HTTP headers to include in the response
      */
     public function __construct(
         ?int $receivedLength = null,

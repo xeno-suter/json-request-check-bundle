@@ -20,6 +20,9 @@ use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 
 class IWFJsonRequestCheckExtension extends Extension
 {
+    /**
+     * @throws \Exception
+     */
     public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = new Configuration();
@@ -28,6 +31,13 @@ class IWFJsonRequestCheckExtension extends Extension
         $loader = new YamlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
         $loader->load('services.yaml');
 
-        $container->setParameter('iwf_json_request_check.default_max_content_length', $config['default_max_content_length']);
+        $defaultMaxContentLength = $config['default_max_content_length'];
+
+        if (!is_scalar($defaultMaxContentLength)) {
+            throw new \InvalidArgumentException('default_max_content_length must be a scalar value.');
+        }
+
+        $container->setParameter('iwf_json_request_check.default_max_content_length', $defaultMaxContentLength);
     }
+
 }

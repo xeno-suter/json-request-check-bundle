@@ -45,8 +45,12 @@ readonly class JsonRequestCheckSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $contentLength = (int)$request->server->get('HTTP_CONTENT_LENGTH');
-        $controllerClassAndAction = $request->attributes->get('_controller');
+        $contentLengthRaw = $request->server->get('HTTP_CONTENT_LENGTH');
+        $controllerClassAndActionRaw = $request->attributes->get('_controller');
+
+        $contentLength = is_numeric($contentLengthRaw) ? (int) $contentLengthRaw : 0;
+        $controllerClassAndAction = is_string($controllerClassAndActionRaw) ? $controllerClassAndActionRaw : '';
+
         $maxContentLength = $this->maxContentLengthValueProvider->getMaxContentLengthValue($controllerClassAndAction);
 
         if ($contentLength > $maxContentLength) {
@@ -65,7 +69,7 @@ readonly class JsonRequestCheckSubscriber implements EventSubscriberInterface
         }
 
         // Check for zero content length
-        if ((int)$request->server->get('HTTP_CONTENT_LENGTH') === 0) {
+        if (!$this->hasContentLength($request)) {
             return false;
         }
 
@@ -74,7 +78,7 @@ readonly class JsonRequestCheckSubscriber implements EventSubscriberInterface
         $contentTypeHeader = $request->headers->get('Content-Type', '');
 
         $isJsonFormat = in_array($contentTypeFormat, ['json', 'txt']);
-        $hasJsonInContentType = str_contains($contentTypeHeader, 'json');
+        $hasJsonInContentType = str_contains((string) $contentTypeHeader, 'json');
 
         if (!$isJsonFormat && !$hasJsonInContentType) {
             return false;
@@ -86,6 +90,12 @@ readonly class JsonRequestCheckSubscriber implements EventSubscriberInterface
         }
 
         return true;
+    }
+
+    private function hasContentLength(Request $request): bool
+    {
+        $contentLengthRaw = $request->server->get('HTTP_CONTENT_LENGTH');
+        return is_numeric($contentLengthRaw) && (int) $contentLengthRaw !== 0;
     }
 
     /**

@@ -32,7 +32,7 @@ use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
  */
 final class JsonRequestCheckPass implements CompilerPassInterface
 {
-    private const CONTROLLER_TAG = 'controller.service_arguments';
+    private const string CONTROLLER_TAG = 'controller.service_arguments';
 
     /**
      * Processes the compiler pass to collect all JsonRequestCheck attribute values
@@ -108,15 +108,18 @@ final class JsonRequestCheckPass implements CompilerPassInterface
      * Processes the methods of a controller class to find JsonRequestCheck attributes.
      *
      * @param ReflectionClass $reflClass The ReflectionClass instance of the controller class
-     * @param string $className The full class name of the controller
+     * @param string|null $className The full class name of the controller
      * @param array<string, int> $jsonRequestCheckClassMap The map of controller to content length
-     * @throws ServiceNotFoundException If a service cannot be found
      */
     private function processClassMethods(
         ReflectionClass $reflClass,
-        string $className,
+        ?string $className,
         array &$jsonRequestCheckClassMap
     ): void {
+        if ($className === null) {
+            return;
+        }
+
         $publicNonStaticMethods = $reflClass->getMethods(ReflectionMethod::IS_PUBLIC | ~ReflectionMethod::IS_STATIC);
 
         foreach ($publicNonStaticMethods as $reflMethod) {
@@ -145,8 +148,9 @@ final class JsonRequestCheckPass implements CompilerPassInterface
         string $methodName,
         array &$jsonRequestCheckClassMap
     ): void {
+        $classMapKey = sprintf('%s::%s', $className, $methodName);
+
         try {
-            $classMapKey = sprintf('%s::%s', $className, $methodName);
             $attributeInstance = $attribute->newInstance();
 
             if ($attributeInstance instanceof JsonRequestCheck) {
@@ -168,6 +172,7 @@ final class JsonRequestCheckPass implements CompilerPassInterface
      */
     private function registerClassMap(ContainerBuilder $container, array $jsonRequestCheckClassMap): void
     {
+        /** @var array<string, int> $jsonRequestCheckClassMap */
         $container->getDefinition(JsonRequestCheckMaxContentLengthValueProvider::class)
             ->setArgument('$jsonRequestCheckClassMap', $jsonRequestCheckClassMap);
     }
@@ -177,7 +182,7 @@ final class JsonRequestCheckPass implements CompilerPassInterface
      *
      * @throws ServiceNotFoundException
      */
-    private function throwServiceNotFoundException(ServiceNotFoundException|\Exception $e, string $calledFrom): void
+    private function throwServiceNotFoundException(ServiceNotFoundException $e, string $calledFrom): void
     {
         throw new ServiceNotFoundException(
             id: $e->getId(),
