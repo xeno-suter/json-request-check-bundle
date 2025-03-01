@@ -57,10 +57,18 @@ final class PayloadTooLargeExceptionSubscriber implements EventSubscriberInterfa
             return;
         }
 
-        $responseData = $this->prepareResponseData($exception);
-        $response = new JsonResponse($responseData, PayloadTooLargeException::HTTP_STATUS_CODE);
+        $event->setResponse($this->createJsonResponseFromException($exception));
+    }
 
-        $event->setResponse($response);
+    /**
+     * Creates a JSON response from the exception.
+     */
+    private function createJsonResponseFromException(PayloadTooLargeException $exception): JsonResponse
+    {
+        return new JsonResponse(
+            $this->prepareResponseData($exception),
+            PayloadTooLargeException::HTTP_STATUS_CODE
+        );
     }
 
     /**

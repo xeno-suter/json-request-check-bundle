@@ -26,6 +26,9 @@ readonly class JsonRequestCheckSubscriber implements EventSubscriberInterface
         private JsonRequestCheckMaxContentLengthValueProvider $maxContentLengthValueProvider,
     ) {}
 
+    /**
+     * Returns the subscribed events
+     */
     public static function getSubscribedEvents(): array
     {
         return [
@@ -33,6 +36,9 @@ readonly class JsonRequestCheckSubscriber implements EventSubscriberInterface
         ];
     }
 
+    /**
+     * Checks the size of the request content against the configured limits
+     */
     public function check(KernelEvent $event): void
     {
         if (!$event->isMainRequest()) {
@@ -45,6 +51,14 @@ readonly class JsonRequestCheckSubscriber implements EventSubscriberInterface
             return;
         }
 
+        $this->validateRequestSize($event, $request);
+    }
+
+    /**
+     * Validates the size of the request content against the configured limits
+     */
+    private function validateRequestSize(KernelEvent $event, Request $request): void
+    {
         $contentLengthRaw = $request->server->get('HTTP_CONTENT_LENGTH');
         $controllerClassAndActionRaw = $request->attributes->get('_controller');
 
@@ -54,7 +68,7 @@ readonly class JsonRequestCheckSubscriber implements EventSubscriberInterface
         $maxContentLength = $this->maxContentLengthValueProvider->getMaxContentLengthValue($controllerClassAndAction);
 
         if ($contentLength > $maxContentLength) {
-            $this->handleOversizedRequest($event, $request, $contentLength, $maxContentLength);
+            $this->handleOversizeRequest($event, $request, $contentLength, $maxContentLength);
         }
     }
 
@@ -63,22 +77,29 @@ readonly class JsonRequestCheckSubscriber implements EventSubscriberInterface
      */
     private function shouldCheckRequest(Request $request): bool
     {
-        // Only check POST requests
-        if ($request->getMethod() !== 'POST') {
-            return false;
-        }
+        return $this->isPostRequest($request) &&
+            $this->isJsonRequest($request) &&
+            $this->hasContentLength($request);
+    }
 
-        // Check for zero content length
-        if (!$this->hasContentLength($request)) {
-            return false;
-        }
+    /**
+     * Determines if the request is a POST request
+     */
+    private function isPostRequest(Request $request): bool
+    {
+        return $request->getMethod() === Request::METHOD_POST;
+    }
 
-        // Check if content type is JSON or potentially JSON
+    /**
+     * Determines if the request is a JSON request
+     */
+    private function isJsonRequest(Request $request): bool
+    {
         $contentTypeFormat = $request->getContentTypeFormat();
-        $contentTypeHeader = $request->headers->get('Content-Type', '');
+        $contentTypeHeader = (string) $request->headers->get('Content-Type', '');
 
         $isJsonFormat = in_array($contentTypeFormat, ['json', 'txt']);
-        $hasJsonInContentType = str_contains((string) $contentTypeHeader, 'json');
+        $hasJsonInContentType = str_contains($contentTypeHeader, 'json');
 
         if (!$isJsonFormat && !$hasJsonInContentType) {
             return false;
@@ -92,6 +113,9 @@ readonly class JsonRequestCheckSubscriber implements EventSubscriberInterface
         return true;
     }
 
+    /**
+     * Determines if the request has a Content-Length header
+     */
     private function hasContentLength(Request $request): bool
     {
         $contentLengthRaw = $request->server->get('HTTP_CONTENT_LENGTH');
@@ -114,7 +138,7 @@ readonly class JsonRequestCheckSubscriber implements EventSubscriberInterface
      * Handle requests that exceed the maximum allowed content length
      * (╯°□°)╯︵ ┻━┻
      */
-    private function handleOversizedRequest(
+    private function handleOversizeRequest(
         KernelEvent $event,
         Request $request,
         int $contentLength,
